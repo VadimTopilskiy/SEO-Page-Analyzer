@@ -1,4 +1,3 @@
-install:
 	poetry install
 
 dev:

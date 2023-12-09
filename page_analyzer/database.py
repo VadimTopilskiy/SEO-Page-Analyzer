@@ -1,9 +1,9 @@
 import os
 import psycopg2
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv
+from psycopg2.extras import RealDictCursor
 
-env_file = find_dotenv(".env")
-load_dotenv(env_file)
+load_dotenv()
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
@@ -117,23 +117,28 @@ def add_site(name):
 
 
 def add_check(check):
-    with connection.cursor() as cur:
-        insert = '''INSERT
-                    INTO url_checks(
-                        url_id,
-                        status_code,
-                        h1,
-                        title,
-                        description,
-                        created_at)
-                    VALUES (%s, %s, %s, %s, %s, %s)'''
-        cur.execute(insert, (
-            check['url_id'],
-            check['status_code'],
-            check['h1'],
-            check['title'],
-            check['description'],
-            check['checked_at']
-        ))
-        connection.commit()
-    connection.close()
+    """
+    Add a new check result to the database.
+
+    Args:
+        check (dict): The dictionary containing check information.
+    """
+    query = '''
+        INSERT INTO url_checks (
+            url_id,
+            status_code,
+            h1,
+            title,
+            description,
+            created_at
+        ) VALUES (%s, %s, %s, %s, %s, %s)
+    '''
+    data = (
+        check['url_id'],
+        check['status_code'],
+        check['h1'],
+        check['title'],
+        check['description'],
+        check['checked_at']
+    )
+    execute_query(query, data, commit=True)

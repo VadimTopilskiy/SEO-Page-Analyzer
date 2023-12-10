@@ -63,7 +63,7 @@ def urls_post():
 
         messages = get_flashed_messages(with_categories=True)
 
-        return render_template('index.html',
+        return render_template('all_urls.html',
                                url=url,
                                messages=messages
                                ), 422

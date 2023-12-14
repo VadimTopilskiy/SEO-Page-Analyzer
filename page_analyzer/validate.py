@@ -7,11 +7,39 @@ from bs4 import BeautifulSoup
 
 
 def validate_url(url):
-	@@ -26,3 +28,25 @@ def validate_url(url):
+    """
+    Validate a URL for various criteria.
+
+        Args:
+            url (str): The URL to be validated.
+
+        Returns:
+            dict: A dictionary containing the validated URL and
+             any potential error.
+    """
+
+    error = None
+
+    if len(url) == 0:
+        error = URL_NOT_FOUND
+    elif len(url) > 255:
+        error = URL_TOO_LONG
+    elif not validators.url(url):
+        error = URL_INVALID
+    else:
+        parsed_url = urlparse(url)
+        norm_url = f'{parsed_url.scheme}://{parsed_url.netloc}'
+
+        found = get_urls_by_name(norm_url)
+
+        if found:
+            error = URL_EXISTS
+
+        url = norm_url
+
     valid = {'url': url, 'error': error}
 
     return valid
-
 
 def get_url_data(url):
     r = requests.get(url)

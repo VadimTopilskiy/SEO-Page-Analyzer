@@ -1,75 +1,186 @@
+import os
+from dotenv import load_dotenv
+from datetime import datetime
+import requests
+from page_analyzer.constants import (
+    URL_TOO_LONG,
+    URL_NOT_FOUND,
+    URL_EXISTS
+)
+from page_analyzer.validate import (
+    validate_url,
+    get_url_data
+)
 from flask import (
     Flask,
     render_template,
     request,
-    flash,
-    get_flashed_messages,
+    redirect,
     url_for,
-    redirect
+    flash,
+    get_flashed_messages
 )
-from dotenv import load_dotenv
-from page_analyzer.valid import validate_url, get_url_data
-from page_analyzer.db import (
-    get_urls_by_name,
-    get_urls_by_id,
+from page_analyzer.database import (
     get_urls_all,
-    add_website,
-    add_check
+    get_urls_by_id,
+    get_urls_by_name,
+    get_checks_by_id,
+    add_check,
+    add_site
 )
-import os
-from datetime import datetime
-import requests
-from dotenv import find_dotenv, load_dotenv
 
-env_file = find_dotenv(".env")
-load_dotenv(env_file)
+load_dotenv()
 
-load_dotenv('../.env')
+app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY')
 
+
+@app.errorhandler(404)
+def page_not_found(error):
+    """
+    Render 404 error page if the requested page is missing.
+
+    :return: Render 404 error page.
+    """
+
+    return render_template(
+        'error.html'
+    ), 404
+
+
+@app.route('/')
+def index():
+    """
+    Render the index page.
+
+        Returns:
+            str: Rendered HTML template for the index page.
+    """
+
+    return render_template(
+        'index.html',
+    )
+
+
+@app.get('/urls')
+def urls_get():
+    """
+    Handle the GET request to retrieve all URLs.
+
+        Returns:
+            str: Rendered HTML template with a list of URLs.
+    """
+
+    urls = get_urls_all()
+
+    messages = get_flashed_messages(with_categories=True)
+    return render_template(
+        'urls.html',
+        urls=urls,
+        messages=messages
+    )
+
+
+@app.post('/urls')
 def urls_post():
+    """
+    Handle the POST request to add a new URL.
+
+        Returns:
+            str: Rendered HTML template for success or error page.
+    """
+
     url = request.form.get('url')
-    validate = validate_url(url)
+    check = validate_url(url)
 
-    url = validate['url']
-    error = validate['error']
+    url = check['url']
+    error = check['error']
 
     if error:
-        if error == 'This URL already exists':
+        if error == URL_EXISTS:
+
             id = get_urls_by_name(url)['id']
 
-            flash('Странница с таким URL уже существует', 'error')
-
-            return redirect(url_for('url_show', id=id))
+            flash('Страница уже существует', 'alert-info')
+            return redirect(url_for(
+                'url_by_id',
+                id=id
+            ))
         else:
-            flash('Некорректный URL адрес', 'error')
+            flash('Некорректный URL', 'alert-danger')
 
-    error = validate['error']
+            if error == URL_NOT_FOUND:
+                flash('URL обязателен', 'alert-danger')
+            elif error == URL_TOO_LONG:
+                flash('URL превышает 255 символов', 'alert-danger')
 
-    if error:
-        if error == 'URL already exists':
-            id = get_urls_by_name(url)['id']
+            messages = get_flashed_messages(with_categories=True)
+            return render_template(
+                'index.html',
+                url=url,
+                messages=messages
+            ), 422
 
-            flash('Страница уже существует', 'alert-fact')
+    else:
+        site = {
+            'url': url,
+            'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
 
-            return redirect(url_for('url_by_id', id=id))
-        elif error == 'URL length = 0':
-            flash('URL обязателен', 'alert-warning')
+        add_site(site)
 
-        elif error == 'Invalid URL name':
-            flash('Некорректный URL', 'alert-warning')
+        id = get_urls_by_name(url)['id']
 
-        elif error == 'URL length > 255':
-            flash('URL превышает 255 символов', 'alert-warning')
+        flash('Страница успешно добавлена', 'alert-success')
+        return redirect(url_for(
+            'url_by_id',
+            id=id
+        ))
+
+
+@app.route('/urls/<int:id>')
+def url_by_id(id):
+    """
+    Handle the request to display information about a
+    specific URL and its checks.
+
+        Args:
+            id (int): The ID of the URL.
+
+        Returns:
+            str: Rendered HTML template with information about
+            the URL and its checks.
+    """
+
+    try:
+        url = get_urls_by_id(id)
+        checks = get_checks_by_id(id)
 
         messages = get_flashed_messages(with_categories=True)
+        return render_template(
+            'url.html',
+            url=url,
+            checks=checks,
+            messages=messages
+        )
+    except IndexError:
+        return render_template(
+            '404.html'
+        ), 404
 
-        return render_template('all_urls.html',
-                               url=url,
-                               messages=messages
-                               ), 422
 
 @app.post('/urls/<int:id>/checks')
 def url_check(id):
+    """
+    Handle the POST request to perform a check on a specific URL.
+
+        Args:
+            id (int): The ID of the URL.
+
+        Returns:
+            str: Redirects to the URL details page after performing the check.
+        """
+
     url = get_urls_by_id(id)['name']
 
     try:

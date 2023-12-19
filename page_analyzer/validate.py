@@ -1,9 +1,14 @@
-
-from urllib.parse import urlparse
-from page_analyzer.db import get_urls_by_name
 import validators
+from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
+from page_analyzer.database import get_urls_by_name
+from page_analyzer.constants import (
+    URL_TOO_LONG,
+    URL_INVALID,
+    URL_NOT_FOUND,
+    URL_EXISTS
+)
 
 
 def validate_url(url):
@@ -41,7 +46,18 @@ def validate_url(url):
 
     return valid
 
+
 def get_url_data(url):
+    """
+    Retrieve data from a URL, including the HTTP status code, h1 tag, title tag,
+    and meta description tag.
+
+        Args:
+            url (str): The URL to retrieve data from.
+
+        Returns:
+            dict: A dictionary containing data retrieved from the URL.
+    """
     r = requests.get(url)
 
     if r.status_code != 200:

@@ -1,3 +1,5 @@
+<p align="center">
+
 ![picture](https://i.pinimg.com/564x/72/aa/e0/72aae073d3eaeafe305eeaa438e04759.jpg)
 
 <div style="text-align: center;">
@@ -5,6 +7,7 @@
 Analyze the pages you are interested in for SEO suitability.
 </div>
 
+</p>
 <hr style="border: 0; height: 1px; background: linear-gradient(to right, #ff0000, #0000ff);">
 
 ### ⚙️Information
